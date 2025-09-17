@@ -9,4 +9,21 @@ public class Route {
 	private Location to; //Поле может быть null
 	private int distance; //Значение поля должно быть больше 1
 	private Long rating; //Поле не может быть null, Значение поля должно быть больше 0
+
+	@Override
+	public String toString() {
+		return String.format(
+				"{" +
+						"id=%d," +
+						"name=%s," +
+						"coordinates=%s," +
+						"creationDate=%s," +
+						"from=%s," +
+						"to=%s," +
+						"distance=%d," +
+						"rating=%d," +
+						"}",
+				id, name, coordinates, creationDate, from, to, distance, rating
+		);
+	}
 }
