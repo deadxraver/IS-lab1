@@ -3,7 +3,7 @@ package backend.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Entity
 @Table(name = "routes")
@@ -21,8 +21,8 @@ public class Route {
     @NotNull
     private Coordinates coordinates;
 
-    @Column(name = "creation_date", nullable = false)
-    private LocalDateTime creationDate;
+    @Column(name = "creation_date", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private ZonedDateTime creationDate;
 
     @Embedded
     @AttributeOverrides({
@@ -53,11 +53,10 @@ public class Route {
     @PrePersist
     protected void onCreate() {
         if (creationDate == null) {
-            creationDate = LocalDateTime.now();
+            creationDate = ZonedDateTime.now();
         }
     }
 
-    // Constructors
     public Route() {}
 
     public Route(String name, Coordinates coordinates, Location from, Location to, int distance, Long rating) {
@@ -69,7 +68,6 @@ public class Route {
         this.rating = rating;
     }
 
-    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -94,11 +92,11 @@ public class Route {
         this.coordinates = coordinates;
     }
 
-    public LocalDateTime getCreationDate() {
+    public ZonedDateTime getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(LocalDateTime creationDate) {
+    public void setCreationDate(ZonedDateTime creationDate) {
         this.creationDate = creationDate;
     }
 
@@ -138,14 +136,14 @@ public class Route {
     public String toString() {
         return String.format(
                 "{" +
-                        "id=%d," +
+                        "id=%s," +
                         "name=%s," +
                         "coordinates=%s," +
                         "creationDate=%s," +
                         "from=%s," +
                         "to=%s," +
                         "distance=%d," +
-                        "rating=%d," +
+                        "rating=%s" +
                         "}",
                 id, name, coordinates, creationDate, from, to, distance, rating
         );

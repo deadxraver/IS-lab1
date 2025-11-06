@@ -35,7 +35,6 @@ public class RouteWebSocket {
 
     @OnMessage
     public void onMessage(String message, Session session) {
-        // Обработка входящих сообщений (если нужно)
         System.out.println("Received message: " + message);
     }
 

@@ -21,17 +21,13 @@ public class RouteService {
     public Route createRoute(Route route) {
 
 		System.out.println("started creating route in route service");
-        // Сервер генерирует id и creationDate — сбрасываем/устанавливаем перед сохранением
-//        route.setId(null);
         if (route.getCreationDate() == null) {
-            route.setCreationDate(LocalDateTime.now());
+            route.setCreationDate(ZonedDateTime.now());
         }
 		System.out.println(route);
-        // Сохраняем через репозиторий в контейнерной транзакции
         Route saved = routeRepository.save(route);
 		System.out.println(saved);
 		System.out.println(route);
-        // Уведомляем вебсокет после успешного сохранения
         RouteWebSocket.notifyRouteCreated();
         return saved;
     }
@@ -77,8 +73,6 @@ public class RouteService {
     public List<Route> searchRoutesByName(String name) {
         return routeRepository.findByNameContaining(name);
     }
-
-    // Специальные операции согласно заданию
 
     /**
      * Удалить один (любой) объект, значение поля rating которого эквивалентно заданному
