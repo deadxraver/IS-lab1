@@ -2,15 +2,14 @@ package backend.entities;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import java.time.ZonedDateTime;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "routes")
 public class Route {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @NotNull
-    @Positive
     private Long id;
 
     @Column(name = "name", nullable = false)
@@ -23,8 +22,7 @@ public class Route {
     private Coordinates coordinates;
 
     @Column(name = "creation_date", nullable = false)
-    @NotNull
-    private ZonedDateTime creationDate;
+    private LocalDateTime creationDate;
 
     @Embedded
     @AttributeOverrides({
@@ -44,7 +42,7 @@ public class Route {
     private Location to;
 
     @Column(name = "distance", nullable = false)
-    @Min(value = 1, message = "Distance must be greater than 1")
+    @Min(value = 2, message = "Distance must be greater than 1")
     private int distance;
 
     @Column(name = "rating", nullable = false)
@@ -55,7 +53,7 @@ public class Route {
     @PrePersist
     protected void onCreate() {
         if (creationDate == null) {
-            creationDate = ZonedDateTime.now();
+            creationDate = LocalDateTime.now();
         }
     }
 
@@ -96,11 +94,11 @@ public class Route {
         this.coordinates = coordinates;
     }
 
-    public ZonedDateTime getCreationDate() {
+    public LocalDateTime getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(ZonedDateTime creationDate) {
+    public void setCreationDate(LocalDateTime creationDate) {
         this.creationDate = creationDate;
     }
 

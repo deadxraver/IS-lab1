@@ -8,15 +8,23 @@
     <persistence-unit name="routeManagementPU" transaction-type="JTA">
         <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
 
+        <jta-data-source>java:/jboss/datasources/PostgresDS</jta-data-source>
         <class>backend.entities.Route</class>
-        <jta-data-source>java:/jboss/datasources/PostgreSQLDS</jta-data-source>
 
         <properties>
-            <property name="eclipselink.logging.level" value="INFO"/>
-            <property name="eclipselink.logging.parameters" value="true"/>
-            <property name="eclipselink.ddl-generation" value="create-or-extend-tables"/>
+<!--            <property name="eclipselink.logging.level" value="INFO"/>-->
+<!--            <property name="eclipselink.logging.parameters" value="true"/>-->
+            <property name="eclipselink.create-ddl-jdbc-file-name" value="create.ddl"/>
+            <property name="eclipselink.drop-ddl-jdbc-file-name" value="drop.ddl"/>
+            <property name="eclipselink.ddl-generation" value="create-tables"/>
             <property name="eclipselink.ddl-generation.output-mode" value="database"/>
             <property name="eclipselink.target-database" value="PostgreSQL"/>
+            <property name="eclipselink.logging.level" value="FINE"/>
+            <property name="eclipselink.logging.level.sql" value="FINE"/>
+            <property name="eclipselink.logging.parameters" value="true"/>
+            <property name="eclipselink.logging.timestamp" value="false"/>
+            <property name="eclipselink.logging.thread" value="false"/>
+            <property name="eclipselink.logging.session" value="false"/>
         </properties>
     </persistence-unit>
 </persistence>

@@ -1,5 +1,6 @@
 package backend.api;
 
+import backend.api.dto.CreateRouteRequest;
 import backend.entities.Route;
 import backend.service.RouteService;
 import jakarta.inject.Inject;
@@ -7,6 +8,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.core.Context;
 
 import java.util.List;
 import java.util.Optional;
@@ -60,12 +63,27 @@ public class RouteResource {
     }
 
     @POST
-    public Response createRoute(@Valid Route route) {
+    public Response createRoute(@Context UriInfo uriInfo, @Valid CreateRouteRequest request) {
         try {
+            // Маппим DTO в сущность; не копируем id/creationDate — они генерируются на сервере/БД
+            Route route = new Route();
+            route.setName(request.getName());
+            route.setCoordinates(request.getCoordinates());
+            route.setFrom(request.getFrom());
+            route.setTo(request.getTo());
+            route.setDistance(request.getDistance());
+            route.setRating(request.getRating());
+
             Route createdRoute = routeService.createRoute(route);
-            return Response.status(Response.Status.CREATED)
-                    .entity(createdRoute)
-                    .build();
+            if (createdRoute != null && createdRoute.getId() != null) {
+                return Response.created(uriInfo.getAbsolutePathBuilder().path(createdRoute.getId().toString()).build())
+                        .entity(createdRoute)
+                        .build();
+            } else {
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity("Route created but id is null")
+                        .build();
+            }
         } catch (Exception e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("Error creating route: " + e.getMessage())

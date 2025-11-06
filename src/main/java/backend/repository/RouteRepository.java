@@ -16,17 +16,20 @@ public class RouteRepository {
     @PersistenceContext(unitName = "routeManagementPU")
     private EntityManager entityManager;
 
-    @Transactional
     public Route save(Route route) {
+        // если это новая сущность — persist + flush, иначе merge + flush
         if (route.getId() == null) {
             entityManager.persist(route);
+            entityManager.flush(); // форсируем вставку, чтобы получить сгенерированный id
+            return route;
         } else {
-            route = entityManager.merge(route);
+            Route merged = entityManager.merge(route);
+            entityManager.flush();
+            return merged;
         }
-        return route;
+//        return entityManager.merge(route);
     }
 
-    @Transactional
     public void delete(Long id) {
         Route route = entityManager.find(Route.class, id);
         if (route != null) {
@@ -128,14 +131,13 @@ public class RouteRepository {
         return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
     }
 
-    @Transactional
     public boolean deleteByRating(Long rating) {
         TypedQuery<Route> query = entityManager.createQuery(
             "SELECT r FROM Route r WHERE r.rating = :rating", Route.class);
         query.setParameter("rating", rating);
         query.setMaxResults(1);
         List<Route> results = query.getResultList();
-        
+
         if (!results.isEmpty()) {
             entityManager.remove(results.get(0));
             return true;

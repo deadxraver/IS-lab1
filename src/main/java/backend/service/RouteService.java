@@ -7,8 +7,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.time.ZonedDateTime;
 
 @ApplicationScoped
 public class RouteService {
@@ -16,14 +18,24 @@ public class RouteService {
     @Inject
     private RouteRepository routeRepository;
 
-    @Transactional
     public Route createRoute(Route route) {
-        Route savedRoute = routeRepository.save(route);
+
+		System.out.println("started creating route in route service");
+        // Сервер генерирует id и creationDate — сбрасываем/устанавливаем перед сохранением
+//        route.setId(null);
+        if (route.getCreationDate() == null) {
+            route.setCreationDate(LocalDateTime.now());
+        }
+		System.out.println(route);
+        // Сохраняем через репозиторий в контейнерной транзакции
+        Route saved = routeRepository.save(route);
+		System.out.println(saved);
+		System.out.println(route);
+        // Уведомляем вебсокет после успешного сохранения
         RouteWebSocket.notifyRouteCreated();
-        return savedRoute;
+        return saved;
     }
 
-    @Transactional
     public Route updateRoute(Long id, Route updatedRoute) {
         Optional<Route> existingRoute = routeRepository.findById(id);
         if (existingRoute.isPresent()) {
@@ -41,7 +53,6 @@ public class RouteService {
         throw new IllegalArgumentException("Route with id " + id + " not found");
     }
 
-    @Transactional
     public void deleteRoute(Long id) {
         routeRepository.delete(id);
         RouteWebSocket.notifyRouteDeleted();
@@ -72,7 +83,6 @@ public class RouteService {
     /**
      * Удалить один (любой) объект, значение поля rating которого эквивалентно заданному
      */
-    @Transactional
     public boolean deleteRouteByRating(Long rating) {
         return routeRepository.deleteByRating(rating);
     }
