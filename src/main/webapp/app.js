@@ -25,10 +25,35 @@
 
 	async function loadRoutes() {
 		try {
-			const resp = await fetch(apiUrl(`/routes?page=${page}&size=${size}`));
+			let url;
+			if (currentFilter && currentFilter.length > 0) {
+				url = apiUrl(`/routes?name=${encodeURIComponent(currentFilter)}&page=${page}&size=${size}`);
+			} else {
+				url = apiUrl(`/routes?page=${page}&size=${size}`);
+			}
+			const resp = await fetch(url);
 			if (!resp.ok) throw new Error('Ошибка загрузки: ' + resp.status);
 			const data = await resp.json();
-			renderTable(data);
+
+			let list = [];
+			if (Array.isArray(data)) {
+				list = data;
+			} else if (data && Array.isArray(data.content)) {
+				list = data.content;
+			} else {
+				// fallback: если пришёл объект с неизвестной структурой — попытаться получить any array properties
+				for (const k of Object.keys(data || {})) {
+					if (Array.isArray(data[k])) { list = data[k]; break; }
+				}
+			}
+
+			// Если сервер не поддерживает фильтрацию (вернул все записи), и есть currentFilter — применим клиентский фильтр
+			if (currentFilter && currentFilter.length > 0) {
+				const lowered = currentFilter.toLowerCase();
+				list = list.filter(r => (r.name || '').toLowerCase().includes(lowered));
+			}
+
+			renderTable(list);
 		} catch (e) {
 			console.error(e);
 			tableBody.innerHTML = `<tr><td colspan="9">Ошибка загрузки данных</td></tr>`;
@@ -52,7 +77,7 @@
         <td>${r.to ? escapeHtml(r.to.name) : ''}</td>
         <td>${r.distance ?? ''}</td>
         <td>${r.rating ?? ''}</td>
-        <td>${r.creationDate ? new Date(r.creationDate).toLocaleString() : ''}</td>
+        <td>${formatDate(r.creationDate)}</td>
         <td class="actions">
           <button data-id="${r.id}" class="editBtn">Ред.</button>
           <button data-id="${r.id}" class="delBtn">Удал.</button>
@@ -221,21 +246,13 @@
 	});
 
 	async function searchAndShow() {
+		// при поиске сбрасываем страницу и вызываем общую загрузку, которая учтёт currentFilter
 		if (!currentFilter) {
-			await reloadAndStay();
+			page = 0;
+			await loadRoutes();
 			return;
 		}
-		try {
-			const resp = await fetch(apiUrl(`/routes?name=${encodeURIComponent(currentFilter)}&page=0&size=${size}`));
-			if (!resp.ok) throw new Error('Ошибка поиска');
-			const data = await resp.json();
-			renderTable(data);
-		} catch (e) {
-			console.error(e);
-		}
-	}
-
-	async function reloadAndStay() {
+		page = 0;
 		await loadRoutes();
 	}
 
@@ -253,6 +270,24 @@
 			"'": '&#39;'
 		})[c]);
 	}
+
+	// добавляем функцию форматирования/парсинга даты, устойчивую к формату ZonedDateTime с зоной в квадратных скобках и наносекундами
+    function formatDate(s) {
+        if (!s) return '';
+        try {
+            // убрать окончание вида [Europe/Moscow] или любой другой в скобках
+            let t = s.replace(/\[.*\]$/, '').trim();
+            // заменить дробную часть секунд (1..9 цифр) на миллисекунды (3 цифры, с доп. нулями или усечением)
+            t = t.replace(/\.([0-9]{1,9})(?=[+-Z]|$)/, function(_, frac) {
+                const ms = (frac + '000').slice(0, 3); // взять первые 3 цифры, дополнив нулями при необходимости
+                return '.' + ms;
+            });
+            const d = new Date(t);
+            return isNaN(d.getTime()) ? '' : d.toLocaleString();
+        } catch (e) {
+            return '';
+        }
+    }
 
 	loadRoutes();
 })();
