@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Routes UI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>Маршруты</h1>
+    <div class="controls">
+        <input id="searchInput" placeholder="Поиск по имени..."/>
+        <button id="searchBtn">Поиск</button>
+        <button id="clearSearchBtn">Сброс</button>
+        <button id="createBtn">Создать маршрут</button>
+    </div>
+</header>
+
+<main>
+    <table id="routesTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Coordinates</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Distance</th>
+            <th>Rating</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="pagination">
+        <button id="prevPage">«</button>
+        <span id="pageInfo">0</span>
+        <button id="nextPage">»</button>
+        <select id="pageSize">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="25">25</option>
+        </select>
+    </div>
+</main>
+
+<!-- modal form -->
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modalTitle">Создать маршрут</h2>
+        <form id="routeForm">
+            <input type="hidden" id="routeId"/>
+            <label>Название<input id="name" required/></label>
+            <fieldset>
+                <legend>Coordinates</legend>
+                <label>X<input id="coordX" type="number" step="any" required/></label>
+                <label>Y<input id="coordY" type="number" step="any" required/></label>
+            </fieldset>
+            <fieldset>
+                <legend>From</legend>
+                <label>Name<input id="fromName" required/></label>
+                <label>X<input id="fromX" type="number" required/></label>
+                <label>Y<input id="fromY" type="number" required/></label>
+            </fieldset>
+            <fieldset>
+                <legend>To (optional)</legend>
+                <label>Name<input id="toName"/></label>
+                <label>X<input id="toX" type="number"/></label>
+                <label>Y<input id="toY" type="number"/></label>
+            </fieldset>
+            <label>Distance<input id="distance" type="number" min="2" required/></label>
+            <label>Rating<input id="rating" type="number" min="1" required/></label>
+            <div class="modal-actions">
+                <button type="submit" id="saveBtn">Сохранить</button>
+                <button type="button" id="cancelBtn">Отмена</button>
+            </div>
+        </form>
+        <div id="formError" class="error"></div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
+

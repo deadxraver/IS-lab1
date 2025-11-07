@@ -481,7 +481,6 @@ public class RouteRepository {
         }
     }
 
-    // --- вспомогательные методы ---
 
     private Route mapRowToRoute(ResultSet rs) throws SQLException {
         Route r = new Route();

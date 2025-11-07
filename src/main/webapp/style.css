@@ -1,0 +1,102 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 16px;
+    color: #222;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+input, select, button {
+    padding: 6px 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background: #f4f4f4;
+}
+
+.pagination {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+button {
+    cursor: pointer;
+}
+
+.modal {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: #fff;
+    padding: 16px;
+    border-radius: 6px;
+    width: 90%;
+    max-width: 720px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-content label {
+    display: block;
+    margin: 6px 0;
+}
+
+fieldset {
+    margin: 8px 0;
+    padding: 8px;
+    border: 1px solid #ccc;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.error {
+    color: #a00;
+    margin-top: 8px;
+}
+
+.actions button {
+    margin-right: 6px;
+}
+
