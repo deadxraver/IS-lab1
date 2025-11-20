@@ -287,9 +287,48 @@
     }
 
     let currentUser = localStorage.getItem('ui_user') || null;
-    if (!currentUser) {
-        currentUser = prompt("Введите ваше имя (для истории импортов):", "user1") || "anonymous";
+
+    function setCurrentUser(name) {
+        currentUser = (name && name.trim()) ? name.trim() : 'anonymous';
         localStorage.setItem('ui_user', currentUser);
+        const disp = document.getElementById('currentUserDisplay');
+        if (disp) disp.textContent = `Пользователь: ${currentUser}`;
+    }
+    if (!currentUser) {
+        const asked = prompt("Введите ваше имя (для истории импортов):", "user1");
+        setCurrentUser(asked || 'anonymous');
+    } else {
+        setCurrentUser(currentUser);
+    }
+
+	const controls = document.querySelector('.controls');
+	let currentUserDisplay = document.getElementById('currentUserDisplay');
+	if (!currentUserDisplay && controls) {
+		currentUserDisplay = document.createElement('span');
+		currentUserDisplay.id = 'currentUserDisplay';
+		currentUserDisplay.style.marginLeft = '12px';
+		currentUserDisplay.style.fontWeight = '600';
+		controls.appendChild(currentUserDisplay);
+	}
+	let changeUserBtn = document.getElementById('changeUserBtn');
+	if (!changeUserBtn && controls) {
+		changeUserBtn = document.createElement('button');
+		changeUserBtn.id = 'changeUserBtn';
+		changeUserBtn.style.marginLeft = '6px';
+		changeUserBtn.textContent = 'Сменить пользователя';
+		controls.appendChild(changeUserBtn);
+	}
+
+    if (changeUserBtn) {
+        changeUserBtn.addEventListener('click', async () => {
+            const newUser = prompt("Введите новое имя пользователя:", currentUser || 'user1');
+            if (newUser && newUser.trim() && newUser.trim() !== currentUser) {
+                setCurrentUser(newUser);
+                await loadImportHistory();
+                page = 0;
+                await reloadAndStay();
+            }
+        });
     }
 
     const importFileInput = document.getElementById('importFile');
@@ -330,10 +369,14 @@
         try {
             const resp = await fetch(apiUrl('/imports'), {
                 headers: {
-                    'X-User': currentUser // убран X-Role
+                    'X-User': currentUser
                 }
             });
-            if (!resp.ok) throw new Error('Failed to load history');
+            // если сервер вернул ошибку (например таблица ещё не создана или другой 4xx/5xx)
+            if (!resp.ok) {
+                importHistoryTableBody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
+                return;
+            }
             const data = await resp.json();
             importHistoryTableBody.innerHTML = '';
             if (Array.isArray(data) && data.length > 0) {
@@ -346,11 +389,14 @@
                 importHistoryTableBody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
             }
         } catch (e) {
-            importHistoryTableBody.innerHTML = '<tr><td colspan="5">Ошибка загрузки истории</td></tr>';
+            importHistoryTableBody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
         }
     }
 
-    loadImportHistory();
+    setCurrentUser(currentUser);
+
+    // сразу загружаем историю импортов при старте (до первого импорта в сессии)
+    loadImportHistory().catch(() => { /* silent */ });
 
 	loadRoutes();
 })();
