@@ -41,6 +41,15 @@ public class RouteService {
         Optional<Route> existingRoute = routeRepository.findById(id);
         if (existingRoute.isPresent()) {
             Route route = existingRoute.get();
+
+            String newName = updatedRoute.getName();
+            if (newName != null && !newName.equals(route.getName())) {
+                Optional<Route> byName = routeRepository.findByExactName(newName);
+                if (byName.isPresent() && !byName.get().getId().equals(id)) {
+                    throw new IllegalArgumentException("Route with name '" + newName + "' already exists");
+                }
+            }
+
             route.setName(updatedRoute.getName());
             route.setCoordinates(updatedRoute.getCoordinates());
             route.setFrom(updatedRoute.getFrom());
