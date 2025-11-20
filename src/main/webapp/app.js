@@ -41,13 +41,11 @@
 			} else if (data && Array.isArray(data.content)) {
 				list = data.content;
 			} else {
-				// fallback: если пришёл объект с неизвестной структурой — попытаться получить any array properties
 				for (const k of Object.keys(data || {})) {
 					if (Array.isArray(data[k])) { list = data[k]; break; }
 				}
 			}
 
-			// Если сервер не поддерживает фильтрацию (вернул все записи), и есть currentFilter — применим клиентский фильтр
 			if (currentFilter && currentFilter.length > 0) {
 				const lowered = currentFilter.toLowerCase();
 				list = list.filter(r => (r.name || '').toLowerCase().includes(lowered));
@@ -246,7 +244,6 @@
 	});
 
 	async function searchAndShow() {
-		// при поиске сбрасываем страницу и вызываем общую загрузку, которая учтёт currentFilter
 		if (!currentFilter) {
 			page = 0;
 			await loadRoutes();
