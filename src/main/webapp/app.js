@@ -286,5 +286,71 @@
         }
     }
 
+    let currentUser = localStorage.getItem('ui_user') || null;
+    if (!currentUser) {
+        currentUser = prompt("Введите ваше имя (для истории импортов):", "user1") || "anonymous";
+        localStorage.setItem('ui_user', currentUser);
+    }
+
+    const importFileInput = document.getElementById('importFile');
+    const importBtn = document.getElementById('importBtn');
+    const importStatus = document.getElementById('importStatus');
+    const importHistoryTableBody = document.querySelector('#importHistory tbody');
+
+    importBtn.addEventListener('click', async () => {
+        const f = importFileInput.files[0];
+        if (!f) { alert('Выберите XML файл'); return; }
+        importStatus.textContent = 'Uploading...';
+        try {
+            const text = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsText(f, 'utf-8');
+            });
+            const resp = await fetch(apiUrl('/imports/routes'), {
+                method: 'POST',
+                headers: {
+                    'X-User': currentUser,
+                    'Content-Type': 'application/xml'
+                },
+                body: text
+            });
+            const txt = await resp.text();
+            if (!resp.ok) throw new Error(txt || resp.statusText);
+            importStatus.textContent = 'Import succeeded: ' + txt;
+        } catch (e) {
+            importStatus.textContent = 'Import failed: ' + e.message;
+        }
+        await loadImportHistory();
+        await reloadAndStay();
+    });
+
+    async function loadImportHistory() {
+        try {
+            const resp = await fetch(apiUrl('/imports'), {
+                headers: {
+                    'X-User': currentUser // убран X-Role
+                }
+            });
+            if (!resp.ok) throw new Error('Failed to load history');
+            const data = await resp.json();
+            importHistoryTableBody.innerHTML = '';
+            if (Array.isArray(data) && data.length > 0) {
+                for (const op of data) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${op.id}</td><td>${escapeHtml(op.user)}</td><td>${escapeHtml(op.status)}</td><td>${op.addedCount ?? ''}</td><td>${formatDate(op.createdAt)}</td>`;
+                    importHistoryTableBody.appendChild(tr);
+                }
+            } else {
+                importHistoryTableBody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
+            }
+        } catch (e) {
+            importHistoryTableBody.innerHTML = '<tr><td colspan="5">Ошибка загрузки истории</td></tr>';
+        }
+    }
+
+    loadImportHistory();
+
 	loadRoutes();
 })();

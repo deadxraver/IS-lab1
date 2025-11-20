@@ -45,6 +45,19 @@
             <option value="25">25</option>
         </select>
     </div>
+
+    <section id="importSection">
+        <h2>Импорт маршрутов (XML)</h2>
+        <input type="file" id="importFile" accept=".xml"/>
+        <button id="importBtn">Загрузить и импортировать</button>
+        <div id="importStatus"></div>
+
+        <h3>История импортов</h3>
+        <table id="importHistory">
+            <thead><tr><th>ID</th><th>User</th><th>Status</th><th>Added</th><th>When</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </section>
 </main>
 
 <!-- modal form -->
@@ -85,4 +98,3 @@
 <script src="app.js"></script>
 </body>
 </html>
-

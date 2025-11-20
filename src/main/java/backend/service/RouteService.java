@@ -24,6 +24,11 @@ public class RouteService {
         if (route.getCreationDate() == null) {
             route.setCreationDate(ZonedDateTime.now());
         }
+
+        if (route.getName() != null && routeRepository.findByExactName(route.getName()).isPresent()) {
+            throw new IllegalArgumentException("Route with name '" + route.getName() + "' already exists");
+        }
+
 		System.out.println(route);
         Route saved = routeRepository.save(route);
 		System.out.println(saved);

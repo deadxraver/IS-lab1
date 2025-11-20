@@ -481,6 +481,20 @@ public class RouteRepository {
         }
     }
 
+    public Optional<Route> findByExactName(String name) {
+        String sql = "SELECT * FROM routes WHERE name = ? LIMIT 1";
+        try (Connection conn = getDataSource().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return Optional.of(mapRowToRoute(rs));
+                return Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to find route by exact name via JDBC", e);
+        }
+    }
+
 
     private Route mapRowToRoute(ResultSet rs) throws SQLException {
         Route r = new Route();
