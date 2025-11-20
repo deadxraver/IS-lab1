@@ -393,10 +393,24 @@
         }
     }
 
+
+    async function reloadAndStay() {
+        try {
+            await loadImportHistory();
+        } catch (e) {
+            console.warn('loadImportHistory failed in reloadAndStay:', e);
+        }
+        try {
+            await loadRoutes();
+        } catch (e) {
+            console.warn('loadRoutes failed in reloadAndStay:', e);
+            tableBody.innerHTML = `<tr><td colspan="9">Ошибка загрузки данных</td></tr>`;
+        }
+    }
+
     setCurrentUser(currentUser);
 
-    // сразу загружаем историю импортов при старте (до первого импорта в сессии)
     loadImportHistory().catch(() => { /* silent */ });
 
-	loadRoutes();
+    loadRoutes();
 })();
