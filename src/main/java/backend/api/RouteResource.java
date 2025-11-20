@@ -1,6 +1,5 @@
 package backend.api;
 
-import backend.api.dto.CreateRouteRequest;
 import backend.entities.Route;
 import backend.service.RouteService;
 import jakarta.inject.Inject;
@@ -63,9 +62,8 @@ public class RouteResource {
     }
 
     @POST
-    public Response createRoute(@Context UriInfo uriInfo, @Valid CreateRouteRequest request) {
+    public Response createRoute(@Context UriInfo uriInfo, @Valid Route request) {
         try {
-            // Маппим DTO в сущность; не копируем id/creationDate — они генерируются на сервере/БД
             Route route = new Route();
             route.setName(request.getName());
             route.setCoordinates(request.getCoordinates());

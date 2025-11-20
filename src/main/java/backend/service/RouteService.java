@@ -5,12 +5,11 @@ import backend.repository.RouteRepository;
 import backend.websocket.RouteWebSocket;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 
-import java.time.LocalDateTime;
+import java.sql.SQLException;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.time.ZonedDateTime;
 
 @ApplicationScoped
 public class RouteService {
@@ -25,16 +24,27 @@ public class RouteService {
             route.setCreationDate(ZonedDateTime.now());
         }
 
-        if (route.getName() != null && routeRepository.findByExactName(route.getName()).isPresent()) {
-            throw new IllegalArgumentException("Route with name '" + route.getName() + "' already exists");
+        final int MAX_RETRIES = 3;
+        int attempt = 0;
+        while (true) {
+            attempt++;
+            try {
+                Route saved = routeRepository.insertWithSerializable(route);
+                RouteWebSocket.notifyRouteCreated();
+                return saved;
+            } catch (SQLException sqlEx) {
+                String sqlState = sqlEx.getSQLState();
+                if ("40001".equals(sqlState) && attempt < MAX_RETRIES) {
+                    try { Thread.sleep(100L * attempt); } catch (InterruptedException ignore) {}
+                    continue;
+                }
+                throw new RuntimeException("Failed to create route: " + sqlEx.getMessage(), sqlEx);
+            } catch (IllegalArgumentException ie) {
+                throw ie;
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to create route: " + ex.getMessage(), ex);
+            }
         }
-
-		System.out.println(route);
-        Route saved = routeRepository.save(route);
-		System.out.println(saved);
-		System.out.println(route);
-        RouteWebSocket.notifyRouteCreated();
-        return saved;
     }
 
     public Route updateRoute(Long id, Route updatedRoute) {

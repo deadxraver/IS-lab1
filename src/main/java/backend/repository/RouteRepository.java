@@ -495,6 +495,75 @@ public class RouteRepository {
         }
     }
 
+    public Route insertWithSerializable(Route route) throws SQLException {
+        String checkSql = "SELECT COUNT(*) FROM routes WHERE name = ?";
+        String insertSql = "INSERT INTO routes (creation_date, distance, name, rating, coordinate_x, coordinate_y, from_name, from_x, from_y, to_name, to_x, to_y) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = getDataSource().getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            conn.setAutoCommit(false);
+            try {
+                try (PreparedStatement check = conn.prepareStatement(checkSql)) {
+                    check.setString(1, route.getName());
+                    try (ResultSet rs = check.executeQuery()) {
+                        rs.next();
+                        if (rs.getInt(1) > 0) {
+                            throw new IllegalArgumentException("Route name already exists: " + route.getName());
+                        }
+                    }
+                }
+
+                try (PreparedStatement ins = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                    if (route.getCreationDate() == null) route.setCreationDate(ZonedDateTime.now());
+                    ins.setTimestamp(1, Timestamp.from(route.getCreationDate().toInstant()));
+                    ins.setInt(2, route.getDistance());
+                    ins.setString(3, route.getName());
+                    ins.setLong(4, route.getRating());
+
+                    if (route.getCoordinates() != null) {
+                        ins.setDouble(5, route.getCoordinates().getX());
+                        ins.setFloat(6, route.getCoordinates().getY());
+                    } else {
+                        ins.setNull(5, Types.DOUBLE);
+                        ins.setNull(6, Types.FLOAT);
+                    }
+
+                    if (route.getFrom() != null) {
+                        ins.setString(7, route.getFrom().getName());
+                        ins.setLong(8, route.getFrom().getX());
+                        if (route.getFrom().getY() != null) ins.setInt(9, route.getFrom().getY()); else ins.setNull(9, Types.INTEGER);
+                    } else {
+                        ins.setNull(7, Types.VARCHAR); ins.setNull(8, Types.BIGINT); ins.setNull(9, Types.INTEGER);
+                    }
+
+                    if (route.getTo() != null) {
+                        ins.setString(10, route.getTo().getName());
+                        ins.setLong(11, route.getTo().getX());
+                        if (route.getTo().getY() != null) ins.setInt(12, route.getTo().getY()); else ins.setNull(12, Types.INTEGER);
+                    } else {
+                        ins.setNull(10, Types.VARCHAR); ins.setNull(11, Types.BIGINT); ins.setNull(12, Types.INTEGER);
+                    }
+
+                    ins.executeUpdate();
+                    try (ResultSet keys = ins.getGeneratedKeys()) {
+                        if (keys != null && keys.next()) {
+                            route.setId(keys.getLong(1));
+                        } else {
+                            throw new SQLException("No generated key returned after insert");
+                        }
+                    }
+                }
+
+                conn.commit();
+                return route;
+            } catch (SQLException | RuntimeException ex) {
+                try { conn.rollback(); } catch (SQLException ignore) {}
+                throw ex;
+            } finally {
+                try { conn.setAutoCommit(true); } catch (SQLException ignore) {}
+            }
+        }
+    }
 
     private Route mapRowToRoute(ResultSet rs) throws SQLException {
         Route r = new Route();
