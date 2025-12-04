@@ -1,9 +1,8 @@
 package backend.repository;
 
 import backend.entities.ImportOperation;
+import backend.util.DataSourceProvider;
 
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.ZoneId;
@@ -19,46 +18,8 @@ public class ImportRepository {
     private volatile DataSource dataSource;
     private volatile boolean schemaInitialized = false;
 
-    private static final String[] JNDI_NAMES = new String[] {
-            "java:jboss/datasources/studs",
-            "java:jboss/datasources/PostgresDS",
-            "java:/jdbc/studs",
-            "java:comp/DefaultDataSource"
-    };
-
     private DataSource getDataSource() {
-        if (dataSource == null) {
-            synchronized (this) {
-                if (dataSource == null) {
-                    NamingException lastEx = null;
-                    for (String name : JNDI_NAMES) {
-                        try {
-                            InitialContext ic = new InitialContext();
-                            Object looked = ic.lookup(name);
-                            if (looked instanceof DataSource) {
-                                dataSource = (DataSource) looked;
-                                try (Connection conn = dataSource.getConnection()) {
-                                    conn.setAutoCommit(true);
-                                    ensureSchemaExists(conn);
-                                } catch (SQLException e) {
-                                    throw new RuntimeException("Failed to initialize import schema after DataSource lookup", e);
-                                }
-                                break;
-                            } else {
-                                lastEx = new NamingException("JNDI lookup returned non-DataSource object for " + name + ": " + looked);
-                            }
-                        } catch (NamingException e) {
-                            lastEx = e;
-                        }
-                    }
-                    if (dataSource == null) {
-                        throw new RuntimeException("DataSource lookup failed for JNDI names " + String.join(", ", JNDI_NAMES),
-                                lastEx);
-                    }
-                }
-            }
-        }
-        return dataSource;
+        return DataSourceProvider.getDataSource();
     }
 
     private void ensureSchemaExists(Connection conn) {

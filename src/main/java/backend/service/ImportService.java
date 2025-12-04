@@ -5,6 +5,7 @@ import backend.entities.Route;
 import backend.entities.Coordinates;
 import backend.repository.ImportRepository;
 import backend.repository.RouteRepository;
+import backend.util.DataSourceProvider;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -12,17 +13,12 @@ import org.w3c.dom.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.sql.DataSource;
 import java.io.InputStream;
 import java.sql.*;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class ImportService {
@@ -33,29 +29,8 @@ public class ImportService {
     @Inject
     private RouteRepository routeRepository;
 
-    private static final String[] JNDI_NAMES = new String[] {
-            "java:jboss/datasources/studs",
-            "java:jboss/datasources/PostgresDS",
-            "java:/jdbc/studs",
-            "java:comp/DefaultDataSource"
-    };
-
-    private DataSource lookupDataSource() {
-        NamingException lastEx = null;
-        for (String name : JNDI_NAMES) {
-            try {
-                InitialContext ic = new InitialContext();
-                Object looked = ic.lookup(name);
-                if (looked instanceof DataSource) return (DataSource) looked;
-            } catch (NamingException e) {
-                lastEx = e;
-            }
-        }
-        throw new RuntimeException("DataSource lookup failed for JNDI names: " + String.join(", ", JNDI_NAMES), lastEx);
-    }
-
     public Long importFromXml(InputStream xmlStream, String username) {
-        DataSource ds = lookupDataSource();
+        DataSource ds = DataSourceProvider.getDataSource();
         int addedCount = 0;
         Long historyId = null;
         List<Route> routes;
