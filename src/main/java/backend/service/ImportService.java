@@ -166,7 +166,6 @@ public class ImportService {
                 }
             } catch (SQLException e) {
                 lastEx = e;
-                // если получение соединения упало — не ретраим десятками раз, выходим
                 break;
             }
         }

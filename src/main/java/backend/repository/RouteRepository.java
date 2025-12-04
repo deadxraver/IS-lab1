@@ -212,47 +212,56 @@ public class RouteRepository {
             }
         } else {
             String sql = "UPDATE routes SET creation_date = ?, distance = ?, name = ?, rating = ?, coordinate_x = ?, coordinate_y = ?, from_name = ?, from_x = ?, from_y = ?, to_name = ?, to_x = ?, to_y = ? WHERE id = ?";
-            try (Connection conn = getDataSource().getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
-                conn.setAutoCommit(true);
-                ps.setTimestamp(1, route.getCreationDate() == null ? null : Timestamp.from(route.getCreationDate().toInstant()));
-                ps.setInt(2, route.getDistance());
-                ps.setString(3, route.getName());
-                ps.setLong(4, route.getRating());
+            try (Connection conn = getDataSource().getConnection()) {
+                conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                conn.setAutoCommit(false);
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setTimestamp(1, route.getCreationDate() == null ? null : Timestamp.from(route.getCreationDate().toInstant()));
+                    ps.setInt(2, route.getDistance());
+                    ps.setString(3, route.getName());
+                    ps.setLong(4, route.getRating());
 
-                if (route.getCoordinates() != null) {
-                    ps.setDouble(5, route.getCoordinates().getX());
-                    ps.setFloat(6, route.getCoordinates().getY());
-                } else {
-                    ps.setNull(5, Types.DOUBLE);
-                    ps.setNull(6, Types.FLOAT);
+                    if (route.getCoordinates() != null) {
+                        ps.setDouble(5, route.getCoordinates().getX());
+                        ps.setFloat(6, route.getCoordinates().getY());
+                    } else {
+                        ps.setNull(5, Types.DOUBLE);
+                        ps.setNull(6, Types.FLOAT);
+                    }
+
+                    if (route.getFrom() != null) {
+                        ps.setString(7, route.getFrom().getName());
+                        ps.setLong(8, route.getFrom().getX());
+                        if (route.getFrom().getY() != null) ps.setInt(9, route.getFrom().getY());
+                        else ps.setNull(9, Types.INTEGER);
+                    } else {
+                        ps.setNull(7, Types.VARCHAR);
+                        ps.setNull(8, Types.BIGINT);
+                        ps.setNull(9, Types.INTEGER);
+                    }
+
+                    if (route.getTo() != null) {
+                        ps.setString(10, route.getTo().getName());
+                        ps.setLong(11, route.getTo().getX());
+                        if (route.getTo().getY() != null) ps.setInt(12, route.getTo().getY());
+                        else ps.setNull(12, Types.INTEGER);
+                    } else {
+                        ps.setNull(10, Types.VARCHAR);
+                        ps.setNull(11, Types.BIGINT);
+                        ps.setNull(12, Types.INTEGER);
+                    }
+
+                    ps.setLong(13, route.getId());
+                    ps.executeUpdate();
+
+                    conn.commit();
+                    return route;
+                } catch (SQLException e) {
+                    try { conn.rollback(); } catch (SQLException ignore) {}
+                    throw new RuntimeException("Failed to update route via JDBC", e);
+                } finally {
+                    try { conn.setAutoCommit(true); } catch (SQLException ignore) {}
                 }
-
-                if (route.getFrom() != null) {
-                    ps.setString(7, route.getFrom().getName());
-                    ps.setLong(8, route.getFrom().getX());
-                    if (route.getFrom().getY() != null) ps.setInt(9, route.getFrom().getY());
-                    else ps.setNull(9, Types.INTEGER);
-                } else {
-                    ps.setNull(7, Types.VARCHAR);
-                    ps.setNull(8, Types.BIGINT);
-                    ps.setNull(9, Types.INTEGER);
-                }
-
-                if (route.getTo() != null) {
-                    ps.setString(10, route.getTo().getName());
-                    ps.setLong(11, route.getTo().getX());
-                    if (route.getTo().getY() != null) ps.setInt(12, route.getTo().getY());
-                    else ps.setNull(12, Types.INTEGER);
-                } else {
-                    ps.setNull(10, Types.VARCHAR);
-                    ps.setNull(11, Types.BIGINT);
-                    ps.setNull(12, Types.INTEGER);
-                }
-
-                ps.setLong(13, route.getId());
-                ps.executeUpdate();
-                return route;
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to update route via JDBC", e);
             }
@@ -261,10 +270,19 @@ public class RouteRepository {
 
     public void delete(Long id) {
         String sql = "DELETE FROM routes WHERE id = ?";
-        try (Connection conn = getDataSource().getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, id);
-            ps.executeUpdate();
+        try (Connection conn = getDataSource().getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, id);
+                ps.executeUpdate();
+                conn.commit();
+            } catch (SQLException e) {
+                try { conn.rollback(); } catch (SQLException ignore) {}
+                throw new RuntimeException("Failed to delete route via JDBC", e);
+            } finally {
+                try { conn.setAutoCommit(true); } catch (SQLException ignore) {}
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Failed to delete route via JDBC", e);
         }
@@ -460,21 +478,32 @@ public class RouteRepository {
         }
     }
 
-    // Удалить один объект с заданным rating
     public boolean deleteByRating(Long rating) {
         String select = "SELECT id FROM routes WHERE rating = ? LIMIT 1";
         String delete = "DELETE FROM routes WHERE id = ?";
-        try (Connection conn = getDataSource().getConnection();
-             PreparedStatement psSel = conn.prepareStatement(select)) {
-            psSel.setLong(1, rating);
-            try (ResultSet rs = psSel.executeQuery()) {
-                if (!rs.next()) return false;
-                long id = rs.getLong(1);
-                try (PreparedStatement psDel = conn.prepareStatement(delete)) {
-                    psDel.setLong(1, id);
-                    int affected = psDel.executeUpdate();
-                    return affected > 0;
+        try (Connection conn = getDataSource().getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            conn.setAutoCommit(false);
+            try (PreparedStatement psSel = conn.prepareStatement(select)) {
+                psSel.setLong(1, rating);
+                try (ResultSet rs = psSel.executeQuery()) {
+                    if (!rs.next()) {
+                        try { conn.commit(); } catch (SQLException ignore) {}
+                        return false;
+                    }
+                    long id = rs.getLong(1);
+                    try (PreparedStatement psDel = conn.prepareStatement(delete)) {
+                        psDel.setLong(1, id);
+                        int affected = psDel.executeUpdate();
+                        conn.commit();
+                        return affected > 0;
+                    }
                 }
+            } catch (SQLException e) {
+                try { conn.rollback(); } catch (SQLException ignore) {}
+                throw new RuntimeException("Failed to delete by rating via JDBC", e);
+            } finally {
+                try { conn.setAutoCommit(true); } catch (SQLException ignore) {}
             }
         } catch (SQLException e) {
             throw new RuntimeException("Failed to delete by rating via JDBC", e);
