@@ -25,6 +25,16 @@
             <property name="eclipselink.logging.timestamp" value="false"/>
             <property name="eclipselink.logging.thread" value="false"/>
             <property name="eclipselink.logging.session" value="false"/>
+            
+            <!-- L2 Cache Configuration with Infinispan -->
+            <property name="eclipselink.cache.type.default" value="SOFT_WEAK"/>
+            <property name="eclipselink.cache.size.default" value="100"/>
+            <property name="eclipselink.cache.shared.default" value="true"/>
+            <!-- Infinispan cache configuration -->
+            <property name="eclipselink.cache.coordination.protocol" value="jgroups"/>
+            <property name="eclipselink.cache.coordination.jgroups.config" value="tcp.xml"/>
+            <!-- Enable cache statistics -->
+            <property name="eclipselink.cache.statistics" value="true"/>
         </properties>
     </persistence-unit>
 </persistence>

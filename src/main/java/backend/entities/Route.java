@@ -7,6 +7,12 @@ import java.time.ZonedDateTime;
 
 @Entity
 @Table(name = "routes")
+@Cacheable(true)
+@org.eclipse.persistence.annotations.Cache(
+    type = org.eclipse.persistence.annotations.CacheType.SOFT_WEAK,
+    size = 100,
+    expiry = 3600000
+)
 public class Route {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

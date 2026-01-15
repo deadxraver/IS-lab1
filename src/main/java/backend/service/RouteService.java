@@ -1,6 +1,7 @@
 package backend.service;
 
 import backend.entities.Route;
+import backend.interceptor.CacheStatistics;
 import backend.repository.RouteRepository;
 import backend.websocket.RouteWebSocket;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
+@CacheStatistics
 public class RouteService {
 
     @Inject

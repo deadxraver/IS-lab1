@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: is-lab1-postgres
+    environment:
+      POSTGRES_DB: studs
+      POSTGRES_USER: ${DB_USER:-studs}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-studs}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-studs}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - is-lab1-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: is-lab1-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - is-lab1-network
+
+  wildfly:
+    build:
+      context: .
+      dockerfile: Dockerfile.wildfly
+    container_name: is-lab1-wildfly
+    volumes:
+      - ./src:/tmp/src:ro
+      - ./src/main/resources/tcp.xml:/opt/jboss/wildfly/standalone/configuration/tcp.xml:ro
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/studs
+      DB_USER: ${DB_USER:-studs}
+      DB_PASSWORD: ${DB_PASSWORD:-studs}
+      DB_MAX_POOL: ${DB_MAX_POOL:-10}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-import-files}
+    ports:
+      - "8080:8080"
+      - "80:8080"  # Frontend доступен на порту 80
+      - "9990:9990"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/IS-lab1/api/routes || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - is-lab1-network
+
+  # Frontend теперь встроен в WildFly WAR файл, отдельный контейнер не нужен
+
+networks:
+  is-lab1-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
+

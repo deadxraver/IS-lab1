@@ -1,0 +1,40 @@
+FROM quay.io/wildfly/wildfly:latest
+
+USER jboss
+
+# Установка PostgreSQL драйвера
+RUN curl -o /tmp/postgresql.jar https://jdbc.postgresql.org/download/postgresql-42.7.1.jar && \
+    /opt/jboss/wildfly/bin/jboss-cli.sh --connect --command="module add --name=org.postgresql --resources=/tmp/postgresql.jar --dependencies=javax.api,javax.transaction.api" && \
+    rm /tmp/postgresql.jar || true
+
+# Установка HikariCP
+RUN curl -L -o /tmp/hikaricp.jar https://repo1.maven.org/maven2/com/zaxxer/HikariCP/5.0.1/HikariCP-5.0.1.jar && \
+    /opt/jboss/wildfly/bin/jboss-cli.sh --connect --command="module add --name=com.zaxxer.hikari --resources=/tmp/hikaricp.jar --dependencies=javax.api,javax.transaction.api,org.postgresql" && \
+    rm /tmp/hikaricp.jar || true
+
+# Установка MinIO клиента
+RUN curl -L -o /tmp/minio.jar https://repo1.maven.org/maven2/io/minio/minio/8.5.7/minio-8.5.7.jar && \
+    /opt/jboss/wildfly/bin/jboss-cli.sh --connect --command="module add --name=io.minio --resources=/tmp/minio.jar --dependencies=javax.api" && \
+    rm /tmp/minio.jar || true
+
+# Копирование конфигурации datasource
+COPY standalone-datasource.cli /opt/jboss/wildfly/bin/
+
+# Настройка datasource (будет выполнена при запуске)
+COPY standalone-datasource.cli /opt/jboss/wildfly/bin/
+
+# Настройка пользователя для администрирования
+RUN /opt/jboss/wildfly/bin/add-user.sh -u admin -p admin --silent || true
+
+# Открытие портов
+EXPOSE 8080 9990
+
+# Скрипт запуска с настройкой datasource
+COPY docker-entrypoint.sh /opt/jboss/wildfly/bin/
+USER root
+RUN chmod +x /opt/jboss/wildfly/bin/docker-entrypoint.sh
+USER jboss
+
+ENTRYPOINT ["/opt/jboss/wildfly/bin/docker-entrypoint.sh"]
+
+

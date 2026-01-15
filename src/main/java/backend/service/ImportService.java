@@ -14,7 +14,9 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import javax.sql.DataSource;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.sql.*;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -29,123 +31,206 @@ public class ImportService {
     @Inject
     private RouteRepository routeRepository;
 
+    @Inject
+    private MinIOService minIOService;
+
     public Long importFromXml(InputStream xmlStream, String username) {
+        // Сохраняем содержимое InputStream в память для повторного использования
+        byte[] xmlBytes;
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = xmlStream.read(buffer)) != -1) {
+                baos.write(buffer, 0, bytesRead);
+            }
+            xmlBytes = baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read XML stream: " + e.getMessage(), e);
+        }
+
         DataSource ds = DataSourceProvider.getDataSource();
-        int addedCount = 0;
         Long historyId = null;
         List<Route> routes;
         try {
-            routes = parseAndValidate(xmlStream);
+            routes = parseAndValidate(new ByteArrayInputStream(xmlBytes));
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse/validate XML: " + e.getMessage(), e);
         }
 
-        final int MAX_RETRIES = 3;
-        int attempt = 0;
-        boolean success = false;
-        Exception lastEx = null;
-
-        while (attempt < MAX_RETRIES && !success) {
-            attempt++;
-            try (Connection conn = ds.getConnection()) {
-                conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-                conn.setAutoCommit(false);
-                try {
-                    // проверка уникальности в рамках одной транзакции
-                    try (PreparedStatement checkStmt = conn.prepareStatement("SELECT COUNT(*) FROM routes WHERE name = ?")) {
-                        for (Route r : routes) {
-                            checkStmt.setString(1, r.getName());
-                            try (ResultSet rs = checkStmt.executeQuery()) {
-                                rs.next();
-                                if (rs.getInt(1) > 0) {
-                                    throw new IllegalArgumentException("Route name already exists: " + r.getName());
-                                }
-                            }
-                        }
-                    }
-
-                    String insertSql = "INSERT INTO routes (creation_date, distance, name, rating, coordinate_x, coordinate_y, from_name, from_x, from_y, to_name, to_x, to_y) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    try (PreparedStatement ins = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
-                        for (Route r : routes) {
-                            if (r.getCreationDate() == null) r.setCreationDate(ZonedDateTime.now());
-                            ins.setTimestamp(1, Timestamp.from(r.getCreationDate().toInstant()));
-                            ins.setInt(2, r.getDistance());
-                            ins.setString(3, r.getName());
-                            ins.setLong(4, r.getRating());
-                            if (r.getCoordinates() != null) {
-                                ins.setDouble(5, r.getCoordinates().getX());
-                                ins.setFloat(6, r.getCoordinates().getY());
-                            } else {
-                                ins.setNull(5, Types.DOUBLE);
-                                ins.setNull(6, Types.FLOAT);
-                            }
-                            if (r.getFrom() != null) {
-                                ins.setString(7, r.getFrom().getName());
-                                ins.setLong(8, r.getFrom().getX());
-                                if (r.getFrom().getY() != null) ins.setInt(9, r.getFrom().getY()); else ins.setNull(9, Types.INTEGER);
-                            } else {
-                                ins.setNull(7, Types.VARCHAR); ins.setNull(8, Types.BIGINT); ins.setNull(9, Types.INTEGER);
-                            }
-                            if (r.getTo() != null) {
-                                ins.setString(10, r.getTo().getName());
-                                ins.setLong(11, r.getTo().getX());
-                                if (r.getTo().getY() != null) ins.setInt(12, r.getTo().getY()); else ins.setNull(12, Types.INTEGER);
-                            } else {
-                                ins.setNull(10, Types.VARCHAR); ins.setNull(11, Types.BIGINT); ins.setNull(12, Types.INTEGER);
-                            }
-                            ins.executeUpdate();
-                            try (ResultSet keys = ins.getGeneratedKeys()) {
-                                if (keys != null && keys.next()) {
-                                    r.setId(keys.getLong(1));
-                                }
-                            }
-                            addedCount++;
-                        }
-                    }
-
-                    conn.commit();
-                    success = true;
+        // Используем распределенную транзакцию (двухфазный коммит)
+        // Используем массивы для хранения значений, которые изменяются в лямбда-выражениях
+        final String[] fileObjectName = new String[1];
+        final Connection[] dbConnection = new Connection[1];
+        final int[] addedCountRef = new int[1];
+        
+        List<DistributedTransactionManager.TransactionParticipant> participants = new ArrayList<>();
+        
+        // Участник 1: MinIO (файловое хранилище)
+        DistributedTransactionManager.TransactionParticipant minioParticipant = 
+            new DistributedTransactionManager.TransactionParticipant(
+                "MinIO",
+                () -> {
+                    // Prepare: загружаем файл в MinIO
                     try {
-                        historyId = importRepository.insertOperation(conn, username, "SUCCESS", addedCount);
+                        if (!minIOService.isAvailable()) {
+                            throw new RuntimeException("MinIO service is not available");
+                        }
+                        fileObjectName[0] = minIOService.uploadFile(
+                            new ByteArrayInputStream(xmlBytes),
+                            "application/xml",
+                            xmlBytes.length
+                        );
                     } catch (Exception e) {
-                        System.err.println("Failed to write import history (SUCCESS): " + e.getMessage());
+                        throw new RuntimeException("Failed to prepare MinIO upload: " + e.getMessage(), e);
                     }
-                    return historyId;
-                } catch (SQLException ex) {
-                    try { conn.rollback(); } catch (SQLException ignore) {}
-                    String sqlState = ex.getSQLState();
-                    // serialization failure
-                    if ("40001".equals(sqlState) && attempt < MAX_RETRIES) {
-                        lastEx = ex;
-                        try { Thread.sleep(100L * attempt); } catch (InterruptedException ignore) {}
-                        continue; // retry
-                    } else {
-                        // записываем историю FAILED (вне транзакции)
+                },
+                () -> {
+                    // Commit: файл уже загружен, ничего не делаем
+                },
+                () -> {
+                    // Rollback: удаляем загруженный файл
+                    if (fileObjectName[0] != null) {
                         try {
-                            importRepository.insertOperation(null, username, "FAILED", 0);
-                        } catch (Exception e2) {
-                            System.err.println("Failed to write import history (FAILED): " + e2.getMessage());
+                            minIOService.deleteFile(fileObjectName[0]);
+                        } catch (Exception e) {
+                            System.err.println("Failed to rollback MinIO file: " + e.getMessage());
                         }
-                        throw new RuntimeException("Import failed: " + ex.getMessage(), ex);
                     }
-                } catch (IllegalArgumentException ie) {
-                    try { conn.rollback(); } catch (SQLException ignore) {}
-                    try {
-                        importRepository.insertOperation(null, username, "FAILED", 0);
-                    } catch (Exception e2) {
-                        System.err.println("Failed to write import history (FAILED): " + e2.getMessage());
-                    }
-                    throw ie;
-                } finally {
-                    try { conn.setAutoCommit(true); } catch (SQLException ignore) {}
                 }
-            } catch (SQLException e) {
-                lastEx = e;
-                break;
+            );
+        participants.add(minioParticipant);
+        
+        // Участник 2: База данных
+        DistributedTransactionManager.TransactionParticipant dbParticipant = 
+            new DistributedTransactionManager.TransactionParticipant(
+                "Database",
+                () -> {
+                    // Prepare: открываем транзакцию и проверяем данные
+                    try {
+                        dbConnection[0] = ds.getConnection();
+                        dbConnection[0].setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                        dbConnection[0].setAutoCommit(false);
+                        
+                        // проверка уникальности в рамках одной транзакции
+                        try (PreparedStatement checkStmt = dbConnection[0].prepareStatement("SELECT COUNT(*) FROM routes WHERE name = ?")) {
+                            for (Route r : routes) {
+                                checkStmt.setString(1, r.getName());
+                                try (ResultSet rs = checkStmt.executeQuery()) {
+                                    rs.next();
+                                    if (rs.getInt(1) > 0) {
+                                        throw new IllegalArgumentException("Route name already exists: " + r.getName());
+                                    }
+                                }
+                            }
+                        }
+                    } catch (SQLException e) {
+                        throw new RuntimeException("Failed to prepare database transaction: " + e.getMessage(), e);
+                    }
+                },
+                () -> {
+                    // Commit: вставляем данные и коммитим транзакцию
+                    try {
+                        String insertSql = "INSERT INTO routes (creation_date, distance, name, rating, coordinate_x, coordinate_y, from_name, from_x, from_y, to_name, to_x, to_y) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        try (PreparedStatement ins = dbConnection[0].prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                            for (Route r : routes) {
+                                if (r.getCreationDate() == null) r.setCreationDate(ZonedDateTime.now());
+                                ins.setTimestamp(1, Timestamp.from(r.getCreationDate().toInstant()));
+                                ins.setInt(2, r.getDistance());
+                                ins.setString(3, r.getName());
+                                ins.setLong(4, r.getRating());
+                                if (r.getCoordinates() != null) {
+                                    ins.setDouble(5, r.getCoordinates().getX());
+                                    ins.setFloat(6, r.getCoordinates().getY());
+                                } else {
+                                    ins.setNull(5, Types.DOUBLE);
+                                    ins.setNull(6, Types.FLOAT);
+                                }
+                                if (r.getFrom() != null) {
+                                    ins.setString(7, r.getFrom().getName());
+                                    ins.setLong(8, r.getFrom().getX());
+                                    if (r.getFrom().getY() != null) ins.setInt(9, r.getFrom().getY()); else ins.setNull(9, Types.INTEGER);
+                                } else {
+                                    ins.setNull(7, Types.VARCHAR); ins.setNull(8, Types.BIGINT); ins.setNull(9, Types.INTEGER);
+                                }
+                                if (r.getTo() != null) {
+                                    ins.setString(10, r.getTo().getName());
+                                    ins.setLong(11, r.getTo().getX());
+                                    if (r.getTo().getY() != null) ins.setInt(12, r.getTo().getY()); else ins.setNull(12, Types.INTEGER);
+                                } else {
+                                    ins.setNull(10, Types.VARCHAR); ins.setNull(11, Types.BIGINT); ins.setNull(12, Types.INTEGER);
+                                }
+                                ins.executeUpdate();
+                                try (ResultSet keys = ins.getGeneratedKeys()) {
+                                    if (keys != null && keys.next()) {
+                                        r.setId(keys.getLong(1));
+                                    }
+                                }
+                                addedCountRef[0]++;
+                            }
+                        }
+                        dbConnection[0].commit();
+                    } catch (SQLException e) {
+                        throw new RuntimeException("Failed to commit database transaction: " + e.getMessage(), e);
+                    }
+                },
+                () -> {
+                    // Rollback: откатываем транзакцию БД
+                    if (dbConnection[0] != null) {
+                        try {
+                            dbConnection[0].rollback();
+                        } catch (SQLException e) {
+                            System.err.println("Failed to rollback database transaction: " + e.getMessage());
+                        } finally {
+                            try {
+                                dbConnection[0].setAutoCommit(true);
+                                dbConnection[0].close();
+                            } catch (SQLException e) {
+                                System.err.println("Failed to close database connection: " + e.getMessage());
+                            }
+                        }
+                    }
+                }
+            );
+        participants.add(dbParticipant);
+        
+        try {
+            // Выполняем распределенную транзакцию
+            DistributedTransactionManager.execute(participants, () -> {
+                // Бизнес-логика уже выполнена в prepare/commit фазах
+                return null;
+            });
+            
+            // Если все успешно, записываем историю импорта (в отдельной транзакции)
+            addedCount = addedCountRef[0];
+            try (Connection historyConn = ds.getConnection()) {
+                historyConn.setAutoCommit(true);
+                historyId = importRepository.insertOperation(historyConn, username, "SUCCESS", addedCount, fileObjectName[0]);
+            } catch (Exception e) {
+                System.err.println("Failed to write import history (SUCCESS): " + e.getMessage());
+            }
+            
+            return historyId;
+        } catch (Exception e) {
+            // Записываем историю FAILED
+            try {
+                importRepository.insertOperation(null, username, "FAILED", 0, null);
+            } catch (Exception e2) {
+                System.err.println("Failed to write import history (FAILED): " + e2.getMessage());
+            }
+            throw new RuntimeException("Import failed: " + e.getMessage(), e);
+        } finally {
+            if (dbConnection[0] != null) {
+                try {
+                    if (!dbConnection[0].isClosed()) {
+                        dbConnection[0].setAutoCommit(true);
+                        dbConnection[0].close();
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Failed to close database connection: " + e.getMessage());
+                }
             }
         }
-
-        throw new RuntimeException("Import failed after retries", lastEx);
     }
 
     private List<Route> parseAndValidate(InputStream xmlStream) throws Exception {

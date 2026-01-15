@@ -8,6 +8,7 @@ public class ImportOperation {
 	private String status;
 	private ZonedDateTime createdAt;
 	private Integer addedCount;
+	private String fileObjectName; // Имя объекта в MinIO
 
 	public Long getId() {
 		return id;
@@ -47,6 +48,14 @@ public class ImportOperation {
 
 	public void setAddedCount(Integer addedCount) {
 		this.addedCount = addedCount;
+	}
+
+	public String getFileObjectName() {
+		return fileObjectName;
+	}
+
+	public void setFileObjectName(String fileObjectName) {
+		this.fileObjectName = fileObjectName;
 	}
 }
 

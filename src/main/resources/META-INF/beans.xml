@@ -5,4 +5,9 @@
        version="4.1"
        bean-discovery-mode="all">
 
+    Interceptors temporarily disabled - Java classes need to be compiled
+    <interceptors>
+        <class>backend.interceptor.CacheStatisticsInterceptor</class>
+    </interceptors>
+
 </beans>

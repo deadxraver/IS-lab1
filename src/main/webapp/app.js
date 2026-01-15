@@ -20,7 +20,7 @@
 	let currentFilter = '';
 
 	function apiUrl(path) {
-		return ('http://localhost:25501/IS-lab1/api' + path);
+		return ('/IS-lab1/api' + path);
 	}
 
 	async function loadRoutes() {

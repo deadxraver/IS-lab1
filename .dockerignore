@@ -1,0 +1,8 @@
+target/
+*.class
+.git/
+.gitignore
+README.md
+tests.jmx
+*.md
+
