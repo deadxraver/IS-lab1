@@ -3,13 +3,8 @@ package backend.interceptor;
 import jakarta.interceptor.AroundInvoke;
 import jakarta.interceptor.Interceptor;
 import jakarta.interceptor.InvocationContext;
-import jakarta.persistence.Cache;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.eclipse.persistence.jpa.JpaEntityManager;
-import org.eclipse.persistence.sessions.Session;
-import org.eclipse.persistence.internal.sessions.AbstractSession;
-import org.eclipse.persistence.internal.identitymaps.IdentityMap;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
