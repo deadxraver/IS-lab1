@@ -73,8 +73,8 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/IS-lab1/api/routes || exit 1"]
-      interval: 30s
-      timeout: 10s
+      interval: 4s
+      timeout: 4s
       retries: 5
       start_period: 60s
     networks:

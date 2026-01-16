@@ -7,7 +7,7 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="base_url" elementType="Argument">
             <stringProp name="Argument.name">base_url</stringProp>
-            <stringProp name="Argument.value">http://localhost:25501/IS-lab1</stringProp>
+            <stringProp name="Argument.value">http://localhost:8080/IS-lab1</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="users_count" elementType="Argument">
@@ -23,7 +23,7 @@
     <hashTree>
       <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults">
         <stringProp name="HTTPSampler.domain">localhost</stringProp>
-        <stringProp name="HTTPSampler.port">25501</stringProp>
+        <stringProp name="HTTPSampler.port">8080</stringProp>
         <stringProp name="HTTPSampler.protocol">http</stringProp>
         <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
           <collectionProp name="Arguments.arguments"/>
@@ -31,7 +31,7 @@
         <stringProp name="HTTPSampler.implementation"></stringProp>
       </ConfigTestElement>
       <hashTree/>
-      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
         <collectionProp name="HeaderManager.headers">
           <elementProp name="" elementType="Header">
             <stringProp name="Header.name">Content-Type</stringProp>
@@ -44,7 +44,7 @@
         </collectionProp>
       </HeaderManager>
       <hashTree/>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="setUp - create shared object">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="setUp - create shared object" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -55,7 +55,7 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create shared route">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create shared route" enabled="true">
           <stringProp name="HTTPSampler.path">/IS-lab1/api/routes</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
@@ -101,7 +101,7 @@
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Concurrent Creation - Uniqueness">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Concurrent Creation - Uniqueness" enabled="true">
         <intProp name="ThreadGroup.num_threads">5</intProp>
         <intProp name="ThreadGroup.ramp_time">0</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -142,7 +142,7 @@
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Concurrent Update/Delete">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Concurrent Update/Delete" enabled="true">
         <intProp name="ThreadGroup.num_threads">3</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -153,7 +153,7 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Update shared route">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Update shared route" enabled="true">
           <stringProp name="HTTPSampler.path">/IS-lab1/api/routes/${__P(sharedId,)}</stringProp>
           <stringProp name="HTTPSampler.method">PUT</stringProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
@@ -182,7 +182,7 @@
           </HeaderManager>
           <hashTree/>
         </hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete shared route">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete shared route" enabled="true">
           <stringProp name="HTTPSampler.path">/IS-lab1/api/routes/${__P(sharedId,)}</stringProp>
           <stringProp name="HTTPSampler.method">DELETE</stringProp>
           <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
@@ -261,6 +261,136 @@
           <hashTree/>
         </hashTree>
       </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="LR3 - Concurrent Import (Distributed Transaction Test)" enabled="true">
+        <intProp name="ThreadGroup.num_threads">5</intProp>
+        <intProp name="ThreadGroup.ramp_time">0</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">3</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Concurrent Import - Unique Names" enabled="true">
+          <stringProp name="HTTPSampler.path">/IS-lab1/api/imports/routes</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">&#xd;
+&lt;routes&gt;&#xd;
+  &lt;route&gt;&#xd;
+    &lt;name&gt;lr3-import-${__threadNum}-${__Random(1000,9999)}&lt;/name&gt;&#xd;
+    &lt;coordinates&gt;&lt;x&gt;${__Random(1.0,100.0)}&lt;/x&gt;&lt;y&gt;${__Random(1.0,100.0)}&lt;/y&gt;&lt;/coordinates&gt;&#xd;
+    &lt;from&gt;&lt;name&gt;From${__threadNum}&lt;/name&gt;&lt;x&gt;${__Random(1,1000)}&lt;/x&gt;&lt;y&gt;${__Random(1,1000)}&lt;/y&gt;&lt;/from&gt;&#xd;
+    &lt;to&gt;&lt;name&gt;To${__threadNum}&lt;/name&gt;&lt;x&gt;${__Random(1,1000)}&lt;/x&gt;&lt;y&gt;${__Random(1,1000)}&lt;/y&gt;&lt;/to&gt;&#xd;
+    &lt;distance&gt;${__Random(2,100)}&lt;/distance&gt;&#xd;
+    &lt;rating&gt;${__Random(1,10)}&lt;/rating&gt;&#xd;
+  &lt;/route&gt;&#xd;
+  &lt;route&gt;&#xd;
+    &lt;name&gt;lr3-import-${__threadNum}-${__Random(1000,9999)}-2&lt;/name&gt;&#xd;
+    &lt;coordinates&gt;&lt;x&gt;${__Random(1.0,100.0)}&lt;/x&gt;&lt;y&gt;${__Random(1.0,100.0)}&lt;/y&gt;&lt;/coordinates&gt;&#xd;
+    &lt;from&gt;&lt;name&gt;From${__threadNum}2&lt;/name&gt;&lt;x&gt;${__Random(1,1000)}&lt;/x&gt;&lt;y&gt;${__Random(1,1000)}&lt;/y&gt;&lt;/from&gt;&#xd;
+    &lt;distance&gt;${__Random(2,100)}&lt;/distance&gt;&#xd;
+    &lt;rating&gt;${__Random(1,10)}&lt;/rating&gt;&#xd;
+  &lt;/route&gt;&#xd;
+&lt;/routes&gt;&#xd;
+                </stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Header - concurrent import" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/xml</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">X-User</stringProp>
+                <stringProp name="Header.value">lr3-user${__threadNum}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Check Import History" enabled="true">
+          <stringProp name="HTTPSampler.path">/IS-lab1/api/imports</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Header - check history" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">X-User</stringProp>
+                <stringProp name="Header.value">lr3-user${__threadNum}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="LR3 - Concurrent Import with Conflicts" enabled="true">
+        <intProp name="ThreadGroup.num_threads">4</intProp>
+        <intProp name="ThreadGroup.ramp_time">0</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">2</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Import with Same Route Names (Conflict Test)" enabled="true">
+          <stringProp name="HTTPSampler.path">/IS-lab1/api/imports/routes</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">&#xd;
+&lt;routes&gt;&#xd;
+  &lt;route&gt;&#xd;
+    &lt;name&gt;conflict-test-route&lt;/name&gt;&#xd;
+    &lt;coordinates&gt;&lt;x&gt;50.0&lt;/x&gt;&lt;y&gt;50.0&lt;/y&gt;&lt;/coordinates&gt;&#xd;
+    &lt;from&gt;&lt;name&gt;ConflictFrom&lt;/name&gt;&lt;x&gt;100&lt;/x&gt;&lt;y&gt;200&lt;/y&gt;&lt;/from&gt;&#xd;
+    &lt;to&gt;&lt;name&gt;ConflictTo&lt;/name&gt;&lt;x&gt;300&lt;/x&gt;&lt;y&gt;400&lt;/y&gt;&lt;/to&gt;&#xd;
+    &lt;distance&gt;10&lt;/distance&gt;&#xd;
+    &lt;rating&gt;5&lt;/rating&gt;&#xd;
+  &lt;/route&gt;&#xd;
+&lt;/routes&gt;&#xd;
+                </stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Header - conflict import" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/xml</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">X-User</stringProp>
+                <stringProp name="Header.value">conflict-user${__threadNum}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
       <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
@@ -298,7 +428,7 @@
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -335,7 +465,7 @@
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="GraphVisualizer" testclass="ResultCollector" testname="Graph Results">
+      <ResultCollector guiclass="GraphVisualizer" testclass="ResultCollector" testname="Graph Results" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
