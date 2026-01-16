@@ -374,7 +374,7 @@
             });
             // если сервер вернул ошибку (например таблица ещё не создана или другой 4xx/5xx)
             if (!resp.ok) {
-                importHistoryTableBody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
+                importHistoryTableBody.innerHTML = '<tr><td colspan="6">Нет данных</td></tr>';
                 return;
             }
             const data = await resp.json();
@@ -382,16 +382,44 @@
             if (Array.isArray(data) && data.length > 0) {
                 for (const op of data) {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${op.id}</td><td>${escapeHtml(op.user)}</td><td>${escapeHtml(op.status)}</td><td>${op.addedCount ?? ''}</td><td>${formatDate(op.createdAt)}</td>`;
+                    const fileCell = op.fileObjectName && op.status === 'SUCCESS' 
+                        ? `<td><button class="download-btn" onclick="downloadImportFile(${op.id})">Скачать</button></td>`
+                        : `<td>-</td>`;
+                    tr.innerHTML = `<td>${op.id}</td><td>${escapeHtml(op.user)}</td><td>${escapeHtml(op.status)}</td><td>${op.addedCount ?? ''}</td><td>${formatDate(op.createdAt)}</td>${fileCell}`;
                     importHistoryTableBody.appendChild(tr);
                 }
             } else {
-                importHistoryTableBody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
+                importHistoryTableBody.innerHTML = '<tr><td colspan="6">Нет данных</td></tr>';
             }
         } catch (e) {
-            importHistoryTableBody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
+            importHistoryTableBody.innerHTML = '<tr><td colspan="6">Нет данных</td></tr>';
         }
     }
+
+    window.downloadImportFile = async function(importId) {
+        try {
+            const resp = await fetch(apiUrl(`/imports/${importId}/file`), {
+                headers: {
+                    'X-User': currentUser
+                }
+            });
+            if (!resp.ok) {
+                alert('Ошибка при скачивании файла: ' + resp.statusText);
+                return;
+            }
+            const blob = await resp.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `import-${importId}.xml`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('Ошибка при скачивании файла: ' + e.message);
+        }
+    };
 
 
     async function reloadAndStay() {

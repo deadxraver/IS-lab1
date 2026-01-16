@@ -48,6 +48,19 @@ button {
     cursor: pointer;
 }
 
+.download-btn {
+    padding: 4px 8px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.download-btn:hover {
+    background-color: #45a049;
+}
+
 .modal {
     position: fixed;
     left: 0;
