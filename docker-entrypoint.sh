@@ -37,6 +37,8 @@ cat > /opt/jboss/wildfly/modules/org/eclipse/persistence/main/module.xml << 'EOF
         <module name="org.jboss.logging"/>
         <module name="jakarta.ws.rs.api"/>
         <module name="jakarta.xml.bind.api"/>
+        <module name="jakarta.json.api"/>
+        <module name="jakarta.servlet.api"/>
     </dependencies>
 </module>
 EOF
