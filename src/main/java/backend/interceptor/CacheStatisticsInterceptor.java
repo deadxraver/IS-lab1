@@ -3,6 +3,7 @@ package backend.interceptor;
 import jakarta.interceptor.AroundInvoke;
 import jakarta.interceptor.Interceptor;
 import jakarta.interceptor.InvocationContext;
+import jakarta.persistence.Cache;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.eclipse.persistence.jpa.JpaEntityManager;
@@ -10,6 +11,10 @@ import org.eclipse.persistence.sessions.Session;
 import org.eclipse.persistence.internal.sessions.AbstractSession;
 import org.eclipse.persistence.internal.identitymaps.IdentityMap;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
+import java.util.Set;
 import java.util.logging.Logger;
 
 @Interceptor
@@ -79,26 +84,28 @@ public class CacheStatisticsInterceptor {
 
         return result;
     }
-    
+
     private long getCacheSizeFromSession() {
         try {
-            if (entityManager != null) {
-                JpaEntityManager jpaEm = entityManager.unwrap(JpaEntityManager.class);
-                if (jpaEm != null) {
-                    Session session = jpaEm.getActiveSession();
-                    if (session != null && session instanceof AbstractSession) {
-                        AbstractSession absSession = (AbstractSession) session;
-                        try {
-                            IdentityMap identityMap = absSession.getIdentityMapAccessor().getIdentityMapManager().getIdentityMap();
-                            if (identityMap != null) {
-                                return identityMap.getSize();
-                            }
-                        } catch (Exception e) {
-                        }
+            MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+
+            ObjectName objectName = new ObjectName("org.eclipse.persistence:type=Session*,session=*");
+
+            Set<ObjectName> objectNames = mBeanServer.queryNames(objectName, null);
+
+            long totalSize = 0;
+            for (ObjectName name : objectNames) {
+                try {
+                    Object cacheSize = mBeanServer.getAttribute(name, "CacheSize");
+                    if (cacheSize instanceof Number) {
+                        totalSize += ((Number) cacheSize).longValue();
                     }
+                } catch (Exception ignored) {
                 }
             }
+            return totalSize;
         } catch (Exception e) {
+            System.err.println("Error getting cache size via JMX: " + e.getMessage());
         }
         return 0;
     }

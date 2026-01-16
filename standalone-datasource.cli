@@ -3,15 +3,8 @@
 /subsystem=datasources/jdbc-driver=postgresql:add(driver-module-name=org.postgresql,driver-class-name=org.postgresql.Driver)
 
 # Затем создаем datasource
-# Примечание: переменные окружения не работают в CLI файлах, используем значения по умолчанию
-/subsystem=datasources/data-source=PostgresDS:add(
-    jndi-name=java:/jboss/datasources/PostgresDS,
-    driver-name=postgresql,
-    connection-url=jdbc:postgresql://is-lab1-postgres:5432/studs,
-    user-name=studs,
-    password=studs,
-    enabled=true,
-    min-pool-size=5,
-    max-pool-size=20
-)
+# Примечание: переменные окружения не работают в CLI файлах напрямую
+# Используем правильное имя хоста (имя сервиса в docker-compose)
+# Все параметры в одной строке для корректной работы jboss-cli
+/subsystem=datasources/data-source=PostgresDS:add(jndi-name=java:/jboss/datasources/PostgresDS,driver-name=postgresql,connection-url=jdbc:postgresql://postgres:5432/studs,user-name=postgres,password=postgres,enabled=true,min-pool-size=5,max-pool-size=20)
 

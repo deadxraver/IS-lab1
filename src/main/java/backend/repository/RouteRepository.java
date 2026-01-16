@@ -25,6 +25,12 @@ public class RouteRepository {
         return DataSourceProvider.getDataSource();
     }
 
+    private Connection getConnectionWithSchema() throws SQLException {
+        Connection conn = getDataSource().getConnection();
+        ensureSchemaExists(conn);
+        return conn;
+    }
+
     private void ensureSchemaExists(Connection conn) {
         if (schemaInitialized) return;
         synchronized (this) {
@@ -61,7 +67,7 @@ public class RouteRepository {
             }
             String sqlReturning = "INSERT INTO routes (creation_date, distance, name, rating, coordinate_x, coordinate_y, from_name, from_x, from_y, to_name, to_x, to_y) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
-            try (Connection conn = getDataSource().getConnection()) {
+            try (Connection conn = getConnectionWithSchema()) {
                 conn.setAutoCommit(true);
                 try (PreparedStatement ps = conn.prepareStatement(sqlReturning)) {
                     ps.setTimestamp(1, Timestamp.from(route.getCreationDate().toInstant()));
@@ -115,7 +121,7 @@ public class RouteRepository {
 
             String sqlNoReturning = "INSERT INTO routes (creation_date, distance, name, rating, coordinate_x, coordinate_y, from_name, from_x, from_y, to_name, to_x, to_y) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            try (Connection conn = getDataSource().getConnection()) {
+            try (Connection conn = getConnectionWithSchema()) {
                 conn.setAutoCommit(true);
                 try (PreparedStatement ps = conn.prepareStatement(sqlNoReturning, Statement.RETURN_GENERATED_KEYS)) {
                     ps.setTimestamp(1, Timestamp.from(route.getCreationDate().toInstant()));
@@ -173,7 +179,7 @@ public class RouteRepository {
             }
         } else {
             String sql = "UPDATE routes SET creation_date = ?, distance = ?, name = ?, rating = ?, coordinate_x = ?, coordinate_y = ?, from_name = ?, from_x = ?, from_y = ?, to_name = ?, to_x = ?, to_y = ? WHERE id = ?";
-            try (Connection conn = getDataSource().getConnection()) {
+            try (Connection conn = getConnectionWithSchema()) {
                 conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
                 conn.setAutoCommit(false);
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -231,7 +237,7 @@ public class RouteRepository {
 
     public void delete(Long id) {
         String sql = "DELETE FROM routes WHERE id = ?";
-        try (Connection conn = getDataSource().getConnection()) {
+        try (Connection conn = getConnectionWithSchema()) {
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             conn.setAutoCommit(false);
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -251,7 +257,7 @@ public class RouteRepository {
 
     public Optional<Route> findById(Long id) {
         String sql = "SELECT * FROM routes WHERE id = ?";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -267,7 +273,7 @@ public class RouteRepository {
 
     public List<Route> findAll() {
         String sql = "SELECT * FROM routes ORDER BY id";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             List<Route> list = new ArrayList<>();
@@ -280,7 +286,7 @@ public class RouteRepository {
 
     public List<Route> findAll(int page, int size) {
         String sql = "SELECT * FROM routes ORDER BY id LIMIT ? OFFSET ?";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, size);
             ps.setInt(2, page * size);
@@ -296,7 +302,7 @@ public class RouteRepository {
 
     public long count() {
         String sql = "SELECT COUNT(*) FROM routes";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             rs.next();
@@ -308,7 +314,7 @@ public class RouteRepository {
 
     public List<Route> findByNameContaining(String name) {
         String sql = "SELECT * FROM routes WHERE LOWER(name) LIKE LOWER(?) ORDER BY id";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, "%" + name + "%");
             try (ResultSet rs = ps.executeQuery()) {
@@ -323,7 +329,7 @@ public class RouteRepository {
 
     public List<Route> findByRatingGreaterThan(Long rating) {
         String sql = "SELECT * FROM routes WHERE rating > ? ORDER BY id";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, rating);
             try (ResultSet rs = ps.executeQuery()) {
@@ -338,7 +344,7 @@ public class RouteRepository {
 
     public long countByRatingGreaterThan(Long rating) {
         String sql = "SELECT COUNT(*) FROM routes WHERE rating > ?";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, rating);
             try (ResultSet rs = ps.executeQuery()) {
@@ -352,7 +358,7 @@ public class RouteRepository {
 
     public List<Long> findDistinctRatings() {
         String sql = "SELECT DISTINCT rating FROM routes ORDER BY rating";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             List<Long> list = new ArrayList<>();
@@ -365,7 +371,7 @@ public class RouteRepository {
 
     public List<Route> findByFromLocation(String fromName) {
         String sql = "SELECT * FROM routes WHERE LOWER(from_name) LIKE LOWER(?) ORDER BY id";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, "%" + fromName + "%");
             try (ResultSet rs = ps.executeQuery()) {
@@ -380,7 +386,7 @@ public class RouteRepository {
 
     public List<Route> findByToLocation(String toName) {
         String sql = "SELECT * FROM routes WHERE LOWER(to_name) LIKE LOWER(?) ORDER BY id";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, "%" + toName + "%");
             try (ResultSet rs = ps.executeQuery()) {
@@ -395,7 +401,7 @@ public class RouteRepository {
 
     public List<Route> findByLocations(String fromName, String toName) {
         String sql = "SELECT * FROM routes WHERE LOWER(from_name) LIKE LOWER(?) AND LOWER(to_name) LIKE LOWER(?) ORDER BY distance";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, "%" + fromName + "%");
             ps.setString(2, "%" + toName + "%");
@@ -411,7 +417,7 @@ public class RouteRepository {
 
     public Optional<Route> findShortestRoute(String fromName, String toName) {
         String sql = "SELECT * FROM routes WHERE LOWER(from_name) LIKE LOWER(?) AND LOWER(to_name) LIKE LOWER(?) ORDER BY distance ASC LIMIT 1";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, "%" + fromName + "%");
             ps.setString(2, "%" + toName + "%");
@@ -426,7 +432,7 @@ public class RouteRepository {
 
     public Optional<Route> findLongestRoute(String fromName, String toName) {
         String sql = "SELECT * FROM routes WHERE LOWER(from_name) LIKE LOWER(?) AND LOWER(to_name) LIKE LOWER(?) ORDER BY distance DESC LIMIT 1";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, "%" + fromName + "%");
             ps.setString(2, "%" + toName + "%");
@@ -442,7 +448,7 @@ public class RouteRepository {
     public boolean deleteByRating(Long rating) {
         String select = "SELECT id FROM routes WHERE rating = ? LIMIT 1";
         String delete = "DELETE FROM routes WHERE id = ?";
-        try (Connection conn = getDataSource().getConnection()) {
+        try (Connection conn = getConnectionWithSchema()) {
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             conn.setAutoCommit(false);
             try (PreparedStatement psSel = conn.prepareStatement(select)) {
@@ -473,7 +479,7 @@ public class RouteRepository {
 
     public Optional<Route> findByExactName(String name) {
         String sql = "SELECT * FROM routes WHERE name = ? LIMIT 1";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, name);
             try (ResultSet rs = ps.executeQuery()) {
@@ -489,7 +495,7 @@ public class RouteRepository {
         String checkSql = "SELECT COUNT(*) FROM routes WHERE name = ?";
         String insertSql = "INSERT INTO routes (creation_date, distance, name, rating, coordinate_x, coordinate_y, from_name, from_x, from_y, to_name, to_x, to_y) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (Connection conn = getDataSource().getConnection()) {
+        try (Connection conn = getConnectionWithSchema()) {
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             conn.setAutoCommit(false);
             try {

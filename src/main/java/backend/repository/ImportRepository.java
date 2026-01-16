@@ -22,6 +22,12 @@ public class ImportRepository {
         return DataSourceProvider.getDataSource();
     }
 
+    private Connection getConnectionWithSchema() throws SQLException {
+        Connection conn = getDataSource().getConnection();
+        ensureSchemaExists(conn);
+        return conn;
+    }
+
     private void ensureSchemaExists(Connection conn) {
         if (schemaInitialized) return;
         synchronized (this) {
@@ -59,7 +65,7 @@ public class ImportRepository {
                 }
             }
 		} else {
-            try (Connection conn = getDataSource().getConnection()) {
+            try (Connection conn = getConnectionWithSchema()) {
                 conn.setAutoCommit(true);
                 String sql = "INSERT INTO import_operations (username, status, created_at, added_count, file_object_name) VALUES (?, ?, ?, ?, ?)";
                 try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -82,7 +88,7 @@ public class ImportRepository {
 
     public List<ImportOperation> findByUser(String username) {
         String sql = "SELECT * FROM import_operations WHERE username = ? ORDER BY id DESC";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
@@ -99,7 +105,7 @@ public class ImportRepository {
 
     public ImportOperation findById(Long id) {
         String sql = "SELECT * FROM import_operations WHERE id = ?";
-        try (Connection conn = getDataSource().getConnection();
+        try (Connection conn = getConnectionWithSchema();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {

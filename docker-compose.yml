@@ -6,14 +6,14 @@ services:
     container_name: is-lab1-postgres
     environment:
       POSTGRES_DB: studs
-      POSTGRES_USER: ${DB_USER:-studs}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-studs}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-studs}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -47,11 +47,16 @@ services:
     container_name: is-lab1-wildfly
     volumes:
       - ./src:/tmp/src:ro
+      - ./build/libs:/tmp/war:ro
       - ./src/main/resources/tcp.xml:/opt/jboss/wildfly/standalone/configuration/tcp.xml:ro
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/studs
-      DB_USER: ${DB_USER:-studs}
-      DB_PASSWORD: ${DB_PASSWORD:-studs}
+      # Явно указываем значения, чтобы избежать конфликтов с системными переменными
+      DB_URL: "jdbc:postgresql://postgres:5432/studs"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_NAME: "studs"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgres"
       DB_MAX_POOL: ${DB_MAX_POOL:-10}
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
@@ -74,8 +79,6 @@ services:
       start_period: 60s
     networks:
       - is-lab1-network
-
-  # Frontend теперь встроен в WildFly WAR файл, отдельный контейнер не нужен
 
 networks:
   is-lab1-network:

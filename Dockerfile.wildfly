@@ -17,10 +17,7 @@ RUN curl -L -o /tmp/minio.jar https://repo1.maven.org/maven2/io/minio/minio/8.5.
     /opt/jboss/wildfly/bin/jboss-cli.sh --connect --command="module add --name=io.minio --resources=/tmp/minio.jar --dependencies=javax.api" && \
     rm /tmp/minio.jar || true
 
-# Копирование конфигурации datasource
-COPY standalone-datasource.cli /opt/jboss/wildfly/bin/
-
-# Настройка datasource (будет выполнена при запуске)
+# Копирование конфигурации datasource (резервный вариант, если переменные окружения не работают)
 COPY standalone-datasource.cli /opt/jboss/wildfly/bin/
 
 # Настройка пользователя для администрирования

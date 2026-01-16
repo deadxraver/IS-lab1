@@ -112,6 +112,25 @@ public class ImportService {
                         dbConnection[0].setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
                         dbConnection[0].setAutoCommit(false);
                         
+                        // Убеждаемся, что таблица routes существует
+                        try (Statement st = dbConnection[0].createStatement()) {
+                            st.executeUpdate("CREATE TABLE IF NOT EXISTS routes (" +
+                                    "id SERIAL PRIMARY KEY," +
+                                    "creation_date TIMESTAMP WITH TIME ZONE NOT NULL," +
+                                    "distance INTEGER NOT NULL," +
+                                    "name VARCHAR(255) NOT NULL," +
+                                    "rating BIGINT NOT NULL," +
+                                    "coordinate_x DOUBLE PRECISION," +
+                                    "coordinate_y REAL," +
+                                    "from_name VARCHAR(255)," +
+                                    "from_x BIGINT," +
+                                    "from_y INTEGER," +
+                                    "to_name VARCHAR(255)," +
+                                    "to_x BIGINT," +
+                                    "to_y INTEGER" +
+                                    ")");
+                        }
+                        
                         // проверка уникальности в рамках одной транзакции
                         try (PreparedStatement checkStmt = dbConnection[0].prepareStatement("SELECT COUNT(*) FROM routes WHERE name = ?")) {
                             for (Route r : routes) {
@@ -202,7 +221,7 @@ public class ImportService {
             });
             
             // Если все успешно, записываем историю импорта (в отдельной транзакции)
-            addedCount = addedCountRef[0];
+            int addedCount = addedCountRef[0];
             try (Connection historyConn = ds.getConnection()) {
                 historyConn.setAutoCommit(true);
                 historyId = importRepository.insertOperation(historyConn, username, "SUCCESS", addedCount, fileObjectName[0]);
