@@ -410,6 +410,58 @@
 
     setCurrentUser(currentUser);
 
+    // Управление логированием кэша
+    const cacheLoggingBtn = document.getElementById('cacheLoggingBtn');
+    if (cacheLoggingBtn) {
+        // Загружаем текущий статус
+        async function loadCacheLoggingStatus() {
+            try {
+                const resp = await fetch(apiUrl('/cache/statistics/enabled'));
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const enabled = data.enabled || false;
+                    updateCacheLoggingButton(enabled);
+                }
+            } catch (e) {
+                console.warn('Failed to load cache logging status:', e);
+            }
+        }
+
+        function updateCacheLoggingButton(enabled) {
+            cacheLoggingBtn.textContent = enabled ? 'Кэш: вкл' : 'Кэш: выкл';
+            cacheLoggingBtn.style.backgroundColor = enabled ? '#4CAF50' : '#f44336';
+            cacheLoggingBtn.style.color = 'white';
+        }
+
+        cacheLoggingBtn.addEventListener('click', async () => {
+            try {
+                const resp = await fetch(apiUrl('/cache/statistics/enabled'));
+                if (!resp.ok) throw new Error('Failed to get status');
+                const data = await resp.json();
+                const currentEnabled = data.enabled || false;
+                
+                const endpoint = currentEnabled 
+                    ? '/cache/statistics/disable' 
+                    : '/cache/statistics/enable';
+                
+                const actionResp = await fetch(apiUrl(endpoint), {
+                    method: 'POST'
+                });
+                
+                if (actionResp.ok) {
+                    updateCacheLoggingButton(!currentEnabled);
+                } else {
+                    throw new Error('Failed to toggle cache logging');
+                }
+            } catch (e) {
+                alert('Ошибка при изменении статуса логирования кэша: ' + e.message);
+            }
+        });
+
+        // Загружаем статус при инициализации
+        loadCacheLoggingStatus();
+    }
+
     loadImportHistory().catch(() => { /* silent */ });
 
     loadRoutes();
